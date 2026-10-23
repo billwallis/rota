@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rota"
 version = "0.0.0"
-description = "A simple application to manage a rota that queues people."
+description = "Manage people rotas."
 authors = [{name = "billwallis"}]
 readme = "README.md"
 license-files = ["LICENSE"]
