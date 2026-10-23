@@ -1,0 +1,266 @@
+import argparse
+import dataclasses
+import datetime
+import functools
+import logging.config
+import pathlib
+import re
+import sqlite3
+import sys
+import textwrap
+import tomllib
+from collections.abc import Sequence
+from typing import Protocol, Self, overload
+
+HERE = pathlib.Path(__file__).parent
+SRC = HERE.parent
+assert SRC.name == "src", f"'{SRC}' != 'src'"
+ROOT = SRC.parent
+
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+class FromTupleable(Protocol):
+    @classmethod
+    def from_tuple(cls, data: tuple) -> Self: ...
+
+
+def configure_logging() -> None:
+    (ROOT / "logs").mkdir(exist_ok=True)
+    with open(HERE / "logger.toml", "rb") as f:
+        logging.config.dictConfig(tomllib.load(f))
+
+
+def debug(text: str) -> None:
+    for line in text.splitlines():
+        logging.debug(line)
+
+
+@functools.cache
+def conn(database_name: str) -> sqlite3.Connection:
+    return sqlite3.connect(database_name)
+
+
+@overload
+def run_script(
+    client: sqlite3.Connection,
+    script_name: str,
+    *,
+    parameters: dict[str, bool | int | str] | None = None,
+    model: None = None,
+) -> None: ...
+@overload
+def run_script[T: FromTupleable](
+    client: sqlite3.Connection,
+    script_name: str,
+    *,
+    parameters: dict[str, bool | int | str] | None = None,
+    model: type[T],
+) -> list[T]: ...
+def run_script(client, script_name, *, parameters = None, model = None):
+    sql_file = HERE / "scripts" / script_name
+    assert sql_file.exists(), f"'{sql_file}' does not exist"
+
+    params = parameters or dict()
+    cursor = client.cursor()
+    try:
+        # TODO: This is brittle! Find a better way to run parameterised scripts
+        statements = [
+            query.strip()
+            for query in sql_file.read_text(encoding="utf-8").split(";")
+            if query.strip() != ""
+        ]
+        for statement in statements:
+            debug(f"Executing the following SQL with params {params}")
+            debug(textwrap.indent(statement, "    "))
+            cursor.execute(statement, params)
+
+        client.commit()
+
+        if model:
+            return [
+                model.from_tuple(result)
+                for result in cursor.fetchall()
+            ]
+        else:
+            return None
+    finally:
+        cursor.close()
+
+
+@dataclasses.dataclass
+class RotaEntry:
+    member_name: str
+    last_actioned: datetime.datetime
+
+    @classmethod
+    def from_tuple(cls, data: tuple) -> Self:
+        return cls(
+            member_name=data[0],
+            last_actioned=data[1],
+        )
+
+    def __str__(self) -> str:
+        return f"{self.member_name}: {self.last_actioned}"
+
+
+class Rota:
+    """
+    A rota, which is a queue of members.
+    """
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> None:
+        if re.match(r"^[A-Za-z0-9-]+$", name):
+            self._name = name
+        else:
+            raise ValueError(
+                "Rota name must be alphanumeric and contain only hyphens."
+            )
+
+    @property
+    def store_path(self) -> str:
+        return f"rota__{self.name}.db"
+
+    @property
+    def store(self) -> sqlite3.Connection:
+        return conn(self.store_path)
+
+
+def initialise_database(
+    client: sqlite3.Connection,
+    member_names: list[str],
+) -> None:
+    run_script(client, "create-rota-objects.sql")
+    for member_name in member_names:
+        run_script(
+            client,
+            "add-rota-member.sql",
+            parameters={"member_name": member_name},
+        )
+
+
+def get_members(client: sqlite3.Connection) -> list[RotaEntry]:
+    return run_script(client, "get-all-members.sql", model=RotaEntry)
+
+
+def run_rota_for_member(
+    client: sqlite3.Connection,
+    member_name: str,
+    actioned_at: datetime.datetime,
+) -> None:
+    run_script(
+        client,
+        "run-rota-for-member.sql",
+        parameters={
+            "member_name": member_name,
+            "actioned_at": actioned_at.strftime(DATETIME_FORMAT),
+        },
+    )
+
+
+def _list() -> int:
+    print("error: not implemented yet", file=sys.stderr)
+
+    return 1
+
+
+def _init(args: argparse.Namespace) -> int:
+    rota = Rota(name=args.rota_name)
+    members = [
+        member.strip()
+        for member in args.members.split(",")
+        if member.strip()
+    ]
+    initialise_database(rota.store, members)
+
+    return 0
+
+
+def _delete(args: argparse.Namespace) -> int:
+    rota = Rota(name=args.rota_name)
+    store_path = pathlib.Path(rota.store_path)
+    if store_path.exists():
+        debug(f"deleting rota at '{store_path}'")
+        store_path.unlink()
+        return 0
+    else:
+        print(f"error: rota not found at '{store_path}'", file=sys.stderr)
+        return 1
+
+
+def _show(args: argparse.Namespace) -> int:
+    rota = Rota(name=args.rota_name)
+    for member in get_members(rota.store):
+        print(member)
+
+    return 0
+
+
+def _run(args: argparse.Namespace) -> int:
+    rota = Rota(name=args.rota_name)
+    run_rota_for_member(rota.store, args.member, args.at)
+
+    return 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """
+    Parse the arguments and run the command.
+    """
+
+    configure_logging()
+
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command")
+
+    subparsers.add_parser("list")
+
+    parser__init = subparsers.add_parser("init")
+    parser__init.add_argument("rota_name")
+    parser__init.add_argument(
+        "--members",
+        default="",
+        help="comma-separated list of members to initiate the rota with",
+    )
+
+    parser__delete = subparsers.add_parser("delete")
+    parser__delete.add_argument("rota_name")
+
+    parser__show = subparsers.add_parser("show")
+    parser__show.add_argument("rota_name")
+
+    parser__run = subparsers.add_parser("run")
+    parser__run.add_argument("rota_name")
+    parser__run.add_argument("--member", required=True)
+    parser__run.add_argument(
+        "--at",
+        type=lambda at: datetime.datetime.strptime(at, DATETIME_FORMAT),
+        default=datetime.datetime.now(),
+    )
+
+    args = parser.parse_args(argv)
+    if args.command == "list":
+        return _list()
+    if args.command == "init":
+        return _init(args)
+    if args.command == "delete":
+        return _delete(args)
+    if args.command == "show":
+        return _show(args)
+    if args.command == "run":
+        return _run(args)
+
+    parser.print_help()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())  # pragma: no cover
