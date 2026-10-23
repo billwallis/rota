@@ -11,9 +11,9 @@
 
 ---
 
-# Rota Queue
+# Rota
 
-A simple application to manage a rota that queues people.
+Manage people rotas.
 
 ## Summary
 
