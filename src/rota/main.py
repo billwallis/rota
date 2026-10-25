@@ -3,6 +3,7 @@ import dataclasses
 import datetime
 import functools
 import logging.config
+import os
 import pathlib
 import re
 import sqlite3
@@ -17,7 +18,18 @@ SRC = HERE.parent
 assert SRC.name == "src", f"'{SRC}' != 'src'"
 ROOT = SRC.parent
 
+# https://specifications.freedesktop.org/basedir/latest/
+_get = os.environ.get
+HOME = pathlib.Path(_get("HOME", _get("USERPROFILE", "."))).resolve()
+
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def get_data_home() -> pathlib.Path:
+    # Setting this as a module constant broke the tests because this is set
+    # _before_ the test runner mocked the environment variable, so to be
+    # safe we just read the env vars directly each time we use this
+    return pathlib.Path(_get("XDG_DATA_HOME", HOME / ".local/share")) / "rota"
 
 
 class FromTupleable(Protocol):
@@ -29,6 +41,10 @@ def configure_logging() -> None:
     (ROOT / "logs").mkdir(exist_ok=True)
     with open(HERE / "logger.toml", "rb") as f:
         logging.config.dictConfig(tomllib.load(f))
+
+
+def configure_local_directories() -> None:
+    get_data_home().mkdir(parents=True, exist_ok=True)
 
 
 def debug(text: str) -> None:
@@ -126,11 +142,12 @@ class Rota:
             )
 
     @property
-    def store_path(self) -> str:
-        return f"rota__{self.name}.db"
+    def store_path(self) -> pathlib.Path:
+        return get_data_home() / f"rota__{self.name}.db"
 
     @property
     def store(self) -> sqlite3.Connection:
+        debug(f"using database at: {self.store_path!r}")
         return conn(self.store_path)
 
 
@@ -186,7 +203,7 @@ def _init(args: argparse.Namespace) -> int:
 
 def _delete(args: argparse.Namespace) -> int:
     rota = Rota(name=args.rota_name)
-    store_path = pathlib.Path(rota.store_path)
+    store_path = rota.store_path
     if store_path.exists():
         debug(f"deleting rota at '{store_path}'")
         rota.store.close()
@@ -218,6 +235,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
 
     configure_logging()
+    configure_local_directories()
 
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")

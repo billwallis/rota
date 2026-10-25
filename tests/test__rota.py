@@ -9,9 +9,9 @@ from rota.main import main
 
 
 @pytest.fixture
-def tmp_dir(tmp_path: pathlib.Path) -> Generator[pathlib.Path]:
-    os.chdir(tmp_path)
-    yield tmp_path
+def data_home(tmp_path: pathlib.Path) -> Generator[pathlib.Path]:
+    os.environ["XDG_DATA_HOME"] = str(tmp_path)
+    yield tmp_path / "rota"
 
 
 def test__rota_without_command_prints_help(
@@ -37,10 +37,10 @@ def test__list__is_not_implemented(
 
 
 def test__init__rota_can_be_created(
-    tmp_dir: pathlib.Path,
+    data_home: pathlib.Path,
 ):
     rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+    expected_db_path = data_home / f"rota__{rota_name}.db"
 
     rc = main(("init", rota_name))
     assert rc == 0
@@ -56,7 +56,6 @@ def test__init__rota_can_be_created(
     ],
 )
 def test__init__rota_cannot_be_created__because_of_invalid_name(
-    tmp_dir: pathlib.Path,
     name: str,
 ):
     with pytest.raises(ValueError):
@@ -64,11 +63,11 @@ def test__init__rota_cannot_be_created__because_of_invalid_name(
 
 
 def test__init__rota_can_be_created__with_no_members(
-    tmp_dir: pathlib.Path,
+    data_home: pathlib.Path,
     capsys: pytest.CaptureFixture,
 ):
     rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+    expected_db_path = data_home / f"rota__{rota_name}.db"
 
     rc = main(("init", rota_name))
     assert rc == 0
@@ -93,13 +92,13 @@ def test__init__rota_can_be_created__with_no_members(
     ],
 )
 def test__init__rota_can_be_created__with_members(
-    tmp_dir: pathlib.Path,
+    data_home: pathlib.Path,
     capsys: pytest.CaptureFixture,
     members_csv: str,
     expected_stdout: str,
 ):
     rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+    expected_db_path = data_home / f"rota__{rota_name}.db"
 
     rc = main(("init", rota_name, "--members", members_csv))
     assert rc == 0
@@ -113,10 +112,10 @@ def test__init__rota_can_be_created__with_members(
 
 
 def test__delete__rota_can_be_deleted(
-    tmp_dir: pathlib.Path,
+    data_home: pathlib.Path,
 ):
     rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+    expected_db_path = data_home / f"rota__{rota_name}.db"
 
     rc = main(("init", rota_name))
     assert rc == 0
@@ -128,11 +127,11 @@ def test__delete__rota_can_be_deleted(
 
 
 def test__delete__rota_cannot_be_deleted__because_it_does_not_exist(
-    tmp_dir: pathlib.Path,
+    data_home: pathlib.Path,
     capsys: pytest.CaptureFixture,
 ):
     rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+    expected_db_path = data_home / f"rota__{rota_name}.db"
     assert not expected_db_path.exists()
 
     rc = main(("delete", rota_name))
@@ -144,7 +143,6 @@ def test__delete__rota_cannot_be_deleted__because_it_does_not_exist(
 
 
 def test__run__rota_can_be_run__with_existing_member(
-    tmp_dir: pathlib.Path,
     capsys: pytest.CaptureFixture,
 ):
     rota_name = str(uuid.uuid4())
@@ -174,7 +172,6 @@ def test__run__rota_can_be_run__with_existing_member(
 
 
 def test__run__rota_can_be_run__with_new_member(
-    tmp_dir: pathlib.Path,
     capsys: pytest.CaptureFixture,
 ):
     rota_name = str(uuid.uuid4())
