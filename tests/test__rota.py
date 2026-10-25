@@ -49,8 +49,28 @@ def test__init__rota_can_be_created(
 def test__init__rota_cannot_be_created__because_of_invalid_name(
     name: str,
 ):
+    # TODO: This should be a CLI error, not an exception!
     with pytest.raises(ValueError):
         main(("init", name))
+
+
+def test__init__rota_cannot_be_created__because_rota_already_exists(
+    data_home: pathlib.Path,
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+    expected_db_path = data_home / f"rota__{rota_name}.db"
+
+    rc = main(("init", rota_name))
+    assert rc == 0
+    assert expected_db_path.exists()
+
+    rc = main(("init", rota_name))
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert expected_db_path.exists()
+    assert captured.out == ""
+    assert captured.err == f"error: rota '{rota_name}' already exists\n"
 
 
 def test__init__rota_can_be_created__with_no_members(
