@@ -40,6 +40,8 @@ rota run 'test' --member 'someone new'
 rota delete 'test'
 ```
 
+Rota data is stored in `$XDG_DATA_HOME/rota`, where `XDG_DATA_HOME` defaults to `~/.local/share`.
+
 ## Contributing
 
 Install the dependencies:
