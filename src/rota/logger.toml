@@ -15,17 +15,14 @@ level = "INFO"
 formatter = "simple"
 stream = "ext://sys.stdout"
 
-#[handlers.file]
-#class = "logging.handlers.RotatingFileHandler"
-#level = "DEBUG"
-#formatter = "detailed"
-#filename = "rota.log"
-#maxBytes = 1048576  # 2 ** 20
-#backupCount = 3
+[handlers.file]
+class = "logging.handlers.RotatingFileHandler"
+level = "DEBUG"
+formatter = "detailed"
+filename = "logs/rota.log"  # TODO: Use different file in the tests
+maxBytes = 1048576  # 2 ** 20
+backupCount = 3
 
 [loggers.root]
 level = "DEBUG"
-handlers = [
-    "stdout",
-#    "file",
-]
+handlers = ["stdout", "file"]
