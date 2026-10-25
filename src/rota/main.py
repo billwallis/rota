@@ -184,7 +184,7 @@ def run_rota_for_member(
 
 
 def _list() -> int:
-    rota_paths = get_data_home().glob("rota__*.db")
+    rota_paths = sorted(get_data_home().glob("rota__*.db"))
     for rota_path in rota_paths:
         rota_name = rota_path.name[6:-3]
         print(f"{rota_name}  ({rota_path})")
