@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rota"
-version = "0.0.0"
+version = "0.0.1"
 description = "Manage people rotas."
 authors = [{name = "billwallis"}]
 readme = "README.md"
