@@ -96,11 +96,11 @@ def test__init__rota_can_be_created__with_no_members(
     "members_csv, expected_stdout",
     [
         ("", ""),
-        ("foo", "foo: 1900-01-01 00:00:00\n"),
-        ("    foo      ", "foo: 1900-01-01 00:00:00\n"),
-        ("foo,bar", "bar: 1900-01-01 00:00:00\nfoo: 1900-01-01 00:00:00\n"),
-        ("    foo ,     bar    ", "bar: 1900-01-01 00:00:00\nfoo: 1900-01-01 00:00:00\n"),
-        ("Foo Bar,Baz Qux,Ahoy!", "Ahoy!: 1900-01-01 00:00:00\nBaz Qux: 1900-01-01 00:00:00\nFoo Bar: 1900-01-01 00:00:00\n"),
+        ("foo", "foo: \n"),
+        ("    foo      ", "foo: \n"),
+        ("foo,bar", "bar: \nfoo: \n"),
+        ("    foo ,     bar    ", "bar: \nfoo: \n"),
+        ("Foo Bar,Baz Qux,Ahoy!", "Ahoy!: \nBaz Qux: \nFoo Bar: \n"),
     ],
 )
 def test__init__rota_can_be_created__with_members(
@@ -193,7 +193,7 @@ def test__run__rota_can_be_run__with_existing_member(
     rc = main(("show", rota_name))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: 1900-01-01 00:00:00\nfoo: 1900-01-01 00:00:00\n"
+    assert captured.out == "bar: \nfoo: \n"
     assert captured.err == ""
 
     foo_at = '2020-01-01 10:00:00'
@@ -201,7 +201,7 @@ def test__run__rota_can_be_run__with_existing_member(
     rc = main(("show", rota_name))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == f"bar: 1900-01-01 00:00:00\nfoo: {foo_at}\n"
+    assert captured.out == f"bar: \nfoo: {foo_at}\n"
     assert captured.err == ""
 
     bar_at = '2020-01-01 11:00:00'
@@ -222,7 +222,7 @@ def test__run__rota_can_be_run__with_new_member(
     rc = main(("show", rota_name))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: 1900-01-01 00:00:00\nfoo: 1900-01-01 00:00:00\n"
+    assert captured.out == "bar: \nfoo: \n"
     assert captured.err == ""
 
     at = '2020-01-01 12:00:00'
@@ -230,5 +230,5 @@ def test__run__rota_can_be_run__with_new_member(
     rc = main(("show", rota_name))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == f"bar: 1900-01-01 00:00:00\nfoo: 1900-01-01 00:00:00\nbaz: {at}\n"
+    assert captured.out == f"bar: \nfoo: \nbaz: {at}\n"
     assert captured.err == ""

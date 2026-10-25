@@ -1,6 +1,6 @@
 create table if not exists rota_members (
     member_name text not null primary key,
-    last_actioned text not null default ('1900-01-01 00:00:00')
+    last_actioned text null
 )
 strict
 ;

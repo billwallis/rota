@@ -120,7 +120,7 @@ def run_script(client, script_name, *, parameters = None, model = None):
 @dataclasses.dataclass
 class RotaEntry:
     member_name: str
-    last_actioned: datetime.datetime
+    last_actioned: datetime.datetime | None
 
     @classmethod
     def from_tuple(cls, data: tuple) -> Self:
@@ -130,7 +130,7 @@ class RotaEntry:
         )
 
     def __str__(self) -> str:
-        return f"{self.member_name}: {self.last_actioned}"
+        return f"{self.member_name}: {self.last_actioned or ''}"
 
 
 class Rota:
