@@ -26,6 +26,10 @@ test = [
 ]
 
 
+[tool.setuptools.package-data]
+rota = ["*.toml"]
+
+
 [tool.poe]
 verbosity = -1
 envfile.optional = ".env"
