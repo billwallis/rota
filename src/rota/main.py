@@ -189,6 +189,7 @@ def _delete(args: argparse.Namespace) -> int:
     store_path = pathlib.Path(rota.store_path)
     if store_path.exists():
         debug(f"deleting rota at '{store_path}'")
+        rota.store.close()
         store_path.unlink()
         return 0
     else:
