@@ -1,5 +1,6 @@
 import os
 import pathlib
+import textwrap
 import uuid
 from collections.abc import Generator
 
@@ -8,7 +9,7 @@ import pytest
 from rota.main import main
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def data_home(tmp_path: pathlib.Path) -> Generator[pathlib.Path]:
     os.environ["XDG_DATA_HOME"] = str(tmp_path)
     yield tmp_path / "rota"
@@ -24,16 +25,6 @@ def test__rota_without_command_prints_help(
     assert "usage:" in captured.out
     assert "positional arguments:" in captured.out
     assert "options:" in captured.out
-
-
-def test__list__is_not_implemented(
-    capsys: pytest.CaptureFixture,
-):
-    rc = main(("list",))
-    captured = capsys.readouterr()
-    assert rc == 1
-    assert captured.out == ""
-    assert captured.err == "error: not implemented yet\n"
 
 
 def test__init__rota_can_be_created(
@@ -109,6 +100,36 @@ def test__init__rota_can_be_created__with_members(
     assert rc == 0
     assert captured.out == expected_stdout
     assert captured.err == ""
+
+
+def test__list__no_rotas_prints_nothing(
+    capsys: pytest.CaptureFixture,
+):
+    rc = main(("list",))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == ""
+    assert captured.err == ""
+
+
+def test__list__rotas_can_be_listed(
+    data_home: pathlib.Path,
+    capsys: pytest.CaptureFixture,
+):
+    for name in ("foo", "bar", "baz"):
+        main(("init", name))
+
+    rc = main(("list",))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.err == ""
+    assert captured.out == textwrap.dedent(
+        f"""\
+        bar  ({data_home / 'rota__bar.db'})
+        baz  ({data_home / 'rota__baz.db'})
+        foo  ({data_home / 'rota__foo.db'})
+        """
+    )
 
 
 def test__delete__rota_can_be_deleted(

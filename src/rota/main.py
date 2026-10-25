@@ -184,9 +184,12 @@ def run_rota_for_member(
 
 
 def _list() -> int:
-    print("error: not implemented yet", file=sys.stderr)
+    rota_paths = get_data_home().glob("rota__*.db")
+    for rota_path in rota_paths:
+        rota_name = rota_path.name[6:-3]
+        print(f"{rota_name}  ({rota_path})")
 
-    return 1
+    return 0
 
 
 def _init(args: argparse.Namespace) -> int:
