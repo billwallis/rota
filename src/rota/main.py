@@ -160,7 +160,7 @@ class Rota:
 
     @property
     def store(self) -> sqlite3.Connection:
-        debug(f"using database at: {self.store_path!r}")
+        debug(f"using database at: {self.store_path.as_posix()}")
         return conn(self.store_path)
 
 
@@ -198,9 +198,9 @@ def run_rota_for_member(
 
 def _list() -> int:
     data_home = get_data_home()
-    debug(f"looking for existing rotas in '{data_home}'")
+    debug(f"looking for existing rotas in '{data_home.as_posix()}'")
     rota_paths = sorted(data_home.glob("rota__*.db"))
-    debug(f"found existing rotas:\n  {'\n  '.join(map(str, rota_paths))}")
+    debug(f"found existing rotas:\n  {'\n  '.join((p.as_posix() for p in rota_paths))}")
     for rota_path in rota_paths:
         rota_name = rota_path.name[6:-3]
         print(f"{rota_name}  ({rota_path})")
