@@ -32,15 +32,28 @@ def get_data_home() -> pathlib.Path:
     return pathlib.Path(_get("XDG_DATA_HOME", HOME / ".local/share")) / "rota"
 
 
+def get_state_home() -> pathlib.Path:
+    return pathlib.Path(_get("XDG_STATE_HOME", HOME / ".local/state")) / "rota"
+
+
 class FromTupleable(Protocol):
     @classmethod
     def from_tuple(cls, data: tuple) -> Self: ...
 
 
 def configure_logging() -> None:
-    (ROOT / "logs").mkdir(exist_ok=True)
     with open(HERE / "logger.toml", "rb") as f:
-        logging.config.dictConfig(tomllib.load(f))
+        config = tomllib.load(f)
+
+    # ensure log destinations exist
+    log_directory = get_state_home()
+    for handler in config.get("handlers", {}).values():
+        if "filename" in handler:
+            filename = log_directory / handler["filename"]
+            filename.parent.mkdir(parents=True, exist_ok=True)
+            handler["filename"] = filename
+
+    logging.config.dictConfig(config)
 
 
 def configure_local_directories() -> None:

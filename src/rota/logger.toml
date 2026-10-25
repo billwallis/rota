@@ -19,7 +19,7 @@ stream = "ext://sys.stdout"
 class = "logging.handlers.RotatingFileHandler"
 level = "DEBUG"
 formatter = "detailed"
-filename = "logs/rota.log"  # TODO: Use different file in the tests
+filename = "logs/rota.log"
 maxBytes = 1048576  # 2 ** 20
 backupCount = 3
 

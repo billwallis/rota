@@ -11,6 +11,7 @@ from rota.main import main
 
 @pytest.fixture(autouse=True)
 def data_home(tmp_path: pathlib.Path) -> Generator[pathlib.Path]:
+    os.environ["XDG_STATE_HOME"] = str(tmp_path)  # probably naughty to add this here too
     os.environ["XDG_DATA_HOME"] = str(tmp_path)
     yield tmp_path / "rota"
 
