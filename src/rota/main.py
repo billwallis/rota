@@ -194,6 +194,10 @@ def _list() -> int:
 
 def _init(args: argparse.Namespace) -> int:
     rota = Rota(name=args.rota_name)
+    if rota.store_path.exists():
+        print(f"error: rota '{args.rota_name}' already exists", file=sys.stderr)
+        return 1
+
     members = [
         member.strip()
         for member in args.members.split(",")
