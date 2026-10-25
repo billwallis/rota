@@ -14,9 +14,6 @@ from collections.abc import Sequence
 from typing import Protocol, Self, overload
 
 HERE = pathlib.Path(__file__).parent
-SRC = HERE.parent
-assert SRC.name == "src", f"'{SRC}' != 'src'"
-ROOT = SRC.parent
 
 # https://specifications.freedesktop.org/basedir/latest/
 _get = os.environ.get
