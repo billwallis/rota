@@ -32,15 +32,28 @@ def get_data_home() -> pathlib.Path:
     return pathlib.Path(_get("XDG_DATA_HOME", HOME / ".local/share")) / "rota"
 
 
+def get_state_home() -> pathlib.Path:
+    return pathlib.Path(_get("XDG_STATE_HOME", HOME / ".local/state")) / "rota"
+
+
 class FromTupleable(Protocol):
     @classmethod
     def from_tuple(cls, data: tuple) -> Self: ...
 
 
 def configure_logging() -> None:
-    (ROOT / "logs").mkdir(exist_ok=True)
     with open(HERE / "logger.toml", "rb") as f:
-        logging.config.dictConfig(tomllib.load(f))
+        config = tomllib.load(f)
+
+    # ensure log destinations exist
+    log_directory = get_state_home()
+    for handler in config.get("handlers", {}).values():
+        if "filename" in handler:
+            filename = log_directory / handler["filename"]
+            filename.parent.mkdir(parents=True, exist_ok=True)
+            handler["filename"] = filename
+
+    logging.config.dictConfig(config)
 
 
 def configure_local_directories() -> None:
@@ -147,7 +160,7 @@ class Rota:
 
     @property
     def store(self) -> sqlite3.Connection:
-        debug(f"using database at: {self.store_path!r}")
+        debug(f"using database at: {self.store_path.as_posix()}")
         return conn(self.store_path)
 
 
@@ -184,7 +197,10 @@ def run_rota_for_member(
 
 
 def _list() -> int:
-    rota_paths = sorted(get_data_home().glob("rota__*.db"))
+    data_home = get_data_home()
+    debug(f"looking for existing rotas in '{data_home.as_posix()}'")
+    rota_paths = sorted(data_home.glob("rota__*.db"))
+    debug(f"found existing rotas:\n  {'\n  '.join((p.as_posix() for p in rota_paths))}")
     for rota_path in rota_paths:
         rota_name = rota_path.name[6:-3]
         print(f"{rota_name}  ({rota_path})")
