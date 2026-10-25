@@ -1,4 +1,3 @@
-import datetime
 import os
 import pathlib
 import uuid
@@ -27,7 +26,7 @@ def test__rota_without_command_prints_help(
     assert "options:" in captured.out
 
 
-def test__rota_list__is_not_implemented(
+def test__list__is_not_implemented(
     capsys: pytest.CaptureFixture,
 ):
     rc = main(("list",))
@@ -35,6 +34,17 @@ def test__rota_list__is_not_implemented(
     assert rc == 1
     assert captured.out == ""
     assert captured.err == "error: not implemented yet\n"
+
+
+def test__init__rota_can_be_created(
+    tmp_dir: pathlib.Path,
+):
+    rota_name = str(uuid.uuid4())
+    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+
+    rc = main(("init", rota_name))
+    assert rc == 0
+    assert expected_db_path.exists()
 
 
 @pytest.mark.parametrize(
@@ -45,7 +55,7 @@ def test__rota_list__is_not_implemented(
         "bad-name!",
     ],
 )
-def test__rota_cannot_be_created__because_of_invalid_name(
+def test__init__rota_cannot_be_created__because_of_invalid_name(
     tmp_dir: pathlib.Path,
     name: str,
 ):
@@ -53,49 +63,7 @@ def test__rota_cannot_be_created__because_of_invalid_name(
         main(("init", name))
 
 
-def test__rota_can_be_created(
-    tmp_dir: pathlib.Path,
-):
-    rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
-
-    rc = main(("init", rota_name))
-    assert rc == 0
-    assert expected_db_path.exists()
-
-
-def test__rota_can_be_deleted(
-    tmp_dir: pathlib.Path,
-):
-    rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
-
-    rc = main(("init", rota_name))
-    assert rc == 0
-    assert expected_db_path.exists()
-
-    rc = main(("delete", rota_name))
-    assert rc == 0
-    assert not expected_db_path.exists()
-
-
-def test__rota_cannot_be_deleted__because_it_does_not_exist(
-    tmp_dir: pathlib.Path,
-    capsys: pytest.CaptureFixture,
-):
-    rota_name = str(uuid.uuid4())
-    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
-    assert not expected_db_path.exists()
-
-    rc = main(("delete", rota_name))
-    captured = capsys.readouterr()
-    assert not expected_db_path.exists()
-    assert rc == 1
-    assert captured.out == ""
-    assert captured.err.startswith("error: rota not found at ")
-
-
-def test__rota_can_be_created__with_no_members(
+def test__init__rota_can_be_created__with_no_members(
     tmp_dir: pathlib.Path,
     capsys: pytest.CaptureFixture,
 ):
@@ -124,7 +92,7 @@ def test__rota_can_be_created__with_no_members(
         ("Foo Bar,Baz Qux,Ahoy!", "Ahoy!: 1900-01-01 00:00:00\nBaz Qux: 1900-01-01 00:00:00\nFoo Bar: 1900-01-01 00:00:00\n"),
     ],
 )
-def test__rota_can_be_created__with_members(
+def test__init__rota_can_be_created__with_members(
     tmp_dir: pathlib.Path,
     capsys: pytest.CaptureFixture,
     members_csv: str,
@@ -144,7 +112,38 @@ def test__rota_can_be_created__with_members(
     assert captured.err == ""
 
 
-def test__rota_can_be_run__with_existing_member(
+def test__delete__rota_can_be_deleted(
+    tmp_dir: pathlib.Path,
+):
+    rota_name = str(uuid.uuid4())
+    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+
+    rc = main(("init", rota_name))
+    assert rc == 0
+    assert expected_db_path.exists()
+
+    rc = main(("delete", rota_name))
+    assert rc == 0
+    assert not expected_db_path.exists()
+
+
+def test__delete__rota_cannot_be_deleted__because_it_does_not_exist(
+    tmp_dir: pathlib.Path,
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+    expected_db_path = tmp_dir / f"rota__{rota_name}.db"
+    assert not expected_db_path.exists()
+
+    rc = main(("delete", rota_name))
+    captured = capsys.readouterr()
+    assert not expected_db_path.exists()
+    assert rc == 1
+    assert captured.out == ""
+    assert captured.err.startswith("error: rota not found at ")
+
+
+def test__run__rota_can_be_run__with_existing_member(
     tmp_dir: pathlib.Path,
     capsys: pytest.CaptureFixture,
 ):
@@ -174,7 +173,7 @@ def test__rota_can_be_run__with_existing_member(
     assert captured.err == ""
 
 
-def test__rota_can_be_run__with_new_member(
+def test__run__rota_can_be_run__with_new_member(
     tmp_dir: pathlib.Path,
     capsys: pytest.CaptureFixture,
 ):
