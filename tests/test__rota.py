@@ -232,3 +232,25 @@ def test__run__rota_can_be_run__with_new_member(
     assert rc == 0
     assert captured.out == f"bar: \nfoo: \nbaz: {at}\n"
     assert captured.err == ""
+
+
+def test__run__rota_can_be_run__and_then_shown(
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main(("init", rota_name, "--members", "foo,bar"))
+    rc = main(("show", rota_name))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar: \nfoo: \n"
+    assert captured.err == ""
+
+    at = '2020-01-01 12:00:00'
+    rc = main(
+        ("run", rota_name, "--member", "baz", "--at", at, "--show")
+    )
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == f"bar: \nfoo: \nbaz: {at}\n"
+    assert captured.err == ""
