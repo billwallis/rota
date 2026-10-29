@@ -13,6 +13,8 @@ import tomllib
 from collections.abc import Sequence
 from typing import Protocol, Self, overload
 
+import rota.menu
+
 HERE = pathlib.Path(__file__).parent
 
 # https://specifications.freedesktop.org/basedir/latest/
@@ -193,6 +195,36 @@ def run_rota_for_member(
     )
 
 
+def run_rota_with_menu(
+    client: sqlite3.Connection,
+    actioned_at: datetime.datetime,
+) -> None:
+    options = [
+        rota.menu.MenuOption(value=member.member_name, label=str(member))
+        for member in get_members(client)
+    ]
+    with rota.menu.hide_cursor():
+        try:
+            member_name = rota.menu.display_menu(options)
+        except BaseException as err:  # noqa
+            # Even if we CTRL+C, we still want to put the cursor back!
+            print(err)
+            member_name = None
+
+    if member_name is None:
+        print("Cancelling...")
+        return
+
+    run_script(
+        client,
+        "run-rota-for-member.sql",
+        parameters={
+            "member_name": member_name,
+            "actioned_at": actioned_at.strftime(DATETIME_FORMAT),
+        },
+    )
+
+
 def _list() -> int:
     data_home = get_data_home()
     debug(f"looking for existing rotas in '{data_home.as_posix()}'")
@@ -206,8 +238,8 @@ def _list() -> int:
 
 
 def _init(args: argparse.Namespace) -> int:
-    rota = Rota(name=args.rota_name)
-    if rota.store_path.exists():
+    rota_ = Rota(name=args.rota_name)
+    if rota_.store_path.exists():
         print(f"error: rota '{args.rota_name}' already exists", file=sys.stderr)
         return 1
 
@@ -216,17 +248,17 @@ def _init(args: argparse.Namespace) -> int:
         for member in args.members.split(",")
         if member.strip()
     ]
-    initialise_database(rota.store, members)
+    initialise_database(rota_.store, members)
 
     return 0
 
 
 def _delete(args: argparse.Namespace) -> int:
-    rota = Rota(name=args.rota_name)
-    store_path = rota.store_path
+    rota_ = Rota(name=args.rota_name)
+    store_path = rota_.store_path
     if store_path.exists():
         debug(f"deleting rota at '{store_path}'")
-        rota.store.close()
+        rota_.store.close()
         store_path.unlink()
         return 0
     else:
@@ -235,16 +267,19 @@ def _delete(args: argparse.Namespace) -> int:
 
 
 def _show(args: argparse.Namespace) -> int:
-    rota = Rota(name=args.rota_name)
-    for member in get_members(rota.store):
+    rota_ = Rota(name=args.rota_name)
+    for member in get_members(rota_.store):
         print(member)
 
     return 0
 
 
 def _run(args: argparse.Namespace) -> int:
-    rota = Rota(name=args.rota_name)
-    run_rota_for_member(rota.store, args.member, args.at)
+    rota_ = Rota(name=args.rota_name)
+    if args.member:
+        run_rota_for_member(rota_.store, args.member, args.at)
+    else:
+        run_rota_with_menu(rota_.store, args.at)
     if args.show:
         _show(args)
 
@@ -280,7 +315,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser__run = subparsers.add_parser("run")
     parser__run.add_argument("rota_name")
-    parser__run.add_argument("--member", required=True)
+    parser__run.add_argument("--member", required=False)
     parser__run.add_argument("--show", action=argparse.BooleanOptionalAction)
     parser__run.add_argument(
         "--at",
