@@ -245,6 +245,8 @@ def _show(args: argparse.Namespace) -> int:
 def _run(args: argparse.Namespace) -> int:
     rota = Rota(name=args.rota_name)
     run_rota_for_member(rota.store, args.member, args.at)
+    if args.show:
+        _show(args)
 
     return 0
 
@@ -279,6 +281,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser__run = subparsers.add_parser("run")
     parser__run.add_argument("rota_name")
     parser__run.add_argument("--member", required=True)
+    parser__run.add_argument("--show", action=argparse.BooleanOptionalAction)
     parser__run.add_argument(
         "--at",
         type=lambda at: datetime.datetime.strptime(at, DATETIME_FORMAT),
