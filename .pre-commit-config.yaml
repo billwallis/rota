@@ -52,7 +52,7 @@ repos:
       - id: tidy-gitkeep
 
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.38.2
+    rev: 0.39.0
     hooks:
       - id: check-github-workflows
       - id: check-compose-spec
@@ -66,7 +66,7 @@ repos:
         files: pyproject.toml
         pass_filenames: true
         language: python
-        additional_dependencies: ["check-jsonschema==0.38.2"]
+        additional_dependencies: ["check-jsonschema==0.39.0"]
         # This calls a remote URL, so run on pre-push to avoid slowing down commits
         stages: ["pre-push"]
 
