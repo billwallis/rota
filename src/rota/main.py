@@ -23,6 +23,24 @@ HOME = pathlib.Path(_get("HOME", _get("USERPROFILE", "."))).resolve()
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+RED = "\033[0;31m"
+GREEN = "\033[0;32m"
+YELLOW = "\033[0;33m"
+BLUE = "\033[0;34m"
+MAGENTA = "\033[0;35m"
+CYAN = "\033[0;36m"
+GREY = "\033[38;5;240m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+
+def colour(text: str, colour_: str) -> str:
+    """
+    Return the text in the given colour.
+    """
+
+    return f"{colour_}{text}{RESET}"
+
 
 def get_data_home() -> pathlib.Path:
     # Setting this as a module constant broke the tests because this is set
@@ -230,9 +248,13 @@ def _list() -> int:
     debug(f"looking for existing rotas in '{data_home.as_posix()}'")
     rota_paths = sorted(data_home.glob("rota__*.db"))
     debug(f"found existing rotas:\n  {'\n  '.join((p.as_posix() for p in rota_paths))}")
+    if not rota_paths:
+        return 0
+
+    left_width = -5 + max(len(p.name) for p in rota_paths)
     for rota_path in rota_paths:
         rota_name = rota_path.name[6:-3]
-        print(f"{rota_name}  ({rota_path})")
+        print(f"{rota_name:<{left_width}} {colour(str(rota_path), GREY)}")
 
     return 0
 
