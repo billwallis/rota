@@ -23,6 +23,24 @@ HOME = pathlib.Path(_get("HOME", _get("USERPROFILE", "."))).resolve()
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+RED = "\033[0;31m"
+GREEN = "\033[0;32m"
+YELLOW = "\033[0;33m"
+BLUE = "\033[0;34m"
+MAGENTA = "\033[0;35m"
+CYAN = "\033[0;36m"
+GREY = "\033[38;5;240m"
+BOLD = "\033[1m"
+RESET = "\033[0m"
+
+
+def colour(text: str, colour_: str) -> str:
+    """
+    Return the text in the given colour.
+    """
+
+    return f"{colour_}{text}{RESET}"
+
 
 def get_data_home() -> pathlib.Path:
     # Setting this as a module constant broke the tests because this is set
@@ -33,6 +51,10 @@ def get_data_home() -> pathlib.Path:
 
 def get_state_home() -> pathlib.Path:
     return pathlib.Path(_get("XDG_STATE_HOME", HOME / ".local/state")) / "rota"
+
+
+class NoMembersError(Exception):
+    pass
 
 
 class FromTupleable(Protocol):
@@ -203,6 +225,9 @@ def run_rota_with_menu(
         rota.menu.MenuOption(value=member.member_name, label=str(member))
         for member in get_members(client)
     ]
+    if not options:
+        raise NoMembersError("error: no members to choose from")
+
     with rota.menu.hide_cursor():
         try:
             member_name = rota.menu.display_menu(options)
@@ -230,9 +255,13 @@ def _list() -> int:
     debug(f"looking for existing rotas in '{data_home.as_posix()}'")
     rota_paths = sorted(data_home.glob("rota__*.db"))
     debug(f"found existing rotas:\n  {'\n  '.join((p.as_posix() for p in rota_paths))}")
+    if not rota_paths:
+        return 0
+
+    left_width = -5 + max(len(p.name) for p in rota_paths)
     for rota_path in rota_paths:
         rota_name = rota_path.name[6:-3]
-        print(f"{rota_name}  ({rota_path})")
+        print(f"{rota_name:<{left_width}} {colour(str(rota_path), GREY)}")
 
     return 0
 
@@ -268,8 +297,18 @@ def _delete(args: argparse.Namespace) -> int:
 
 def _show(args: argparse.Namespace) -> int:
     rota_ = Rota(name=args.rota_name)
-    for member in get_members(rota_.store):
-        print(member)
+    members = get_members(rota_.store)
+    if not members:
+        return 0
+
+    left_width = max(len(m.member_name) for m in members)
+    for member in members:
+        member_name = f"{member.member_name:<{left_width}}"
+        last_actioned = "" if member.last_actioned is None else str(member.last_actioned)
+        if args.colour:
+            print(f"{member_name}  {colour(last_actioned, GREY)}")
+        else:
+            print(f"{member_name}  {last_actioned}")
 
     return 0
 
@@ -279,7 +318,12 @@ def _run(args: argparse.Namespace) -> int:
     if args.member:
         run_rota_for_member(rota_.store, args.member, args.at)
     else:
-        run_rota_with_menu(rota_.store, args.at)
+        try:
+            run_rota_with_menu(rota_.store, args.at)
+        except NoMembersError:
+            print("error: no members to choose from", file=sys.stderr)
+            return 1
+
     if args.show:
         _show(args)
 
@@ -312,6 +356,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser__show = subparsers.add_parser("show")
     parser__show.add_argument("rota_name")
+    parser__show.add_argument(
+        "--colour",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=f"Whether to use colour in display. Defaults to `%(default)s`.",
+    )
 
     parser__run = subparsers.add_parser("run")
     parser__run.add_argument("rota_name")
@@ -321,6 +371,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--at",
         type=lambda at: datetime.datetime.strptime(at, DATETIME_FORMAT),
         default=datetime.datetime.now(),
+    )
+    parser__run.add_argument(
+        "--colour",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=f"Whether to use colour in display. Defaults to `%(default)s`.",
     )
 
     args = parser.parse_args(argv)

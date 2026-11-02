@@ -17,7 +17,7 @@ from collections.abc import Generator
 
 import pytest
 
-from rota.main import main
+from rota import main
 
 B_KEY_ESC = b"\x1b"
 B_KEY_RETURN = b"\n"
@@ -35,7 +35,7 @@ def data_home(tmp_path: pathlib.Path) -> Generator[pathlib.Path]:
 def test__rota_without_command_prints_help(
     capsys: pytest.CaptureFixture,
 ):
-    rc = main([])
+    rc = main.main([])
     captured = capsys.readouterr()
     assert rc == 0
     assert captured.err == ""
@@ -50,7 +50,7 @@ def test__init__rota_can_be_created(
     rota_name = str(uuid.uuid4())
     expected_db_path = data_home / f"rota__{rota_name}.db"
 
-    rc = main(("init", rota_name))
+    rc = main.main(("init", rota_name))
     assert rc == 0
     assert expected_db_path.exists()
 
@@ -68,7 +68,7 @@ def test__init__rota_cannot_be_created__because_of_invalid_name(
 ):
     # TODO: This should be a CLI error, not an exception!
     with pytest.raises(ValueError):
-        main(("init", name))
+        main.main(("init", name))
 
 
 def test__init__rota_cannot_be_created__because_rota_already_exists(
@@ -78,11 +78,11 @@ def test__init__rota_cannot_be_created__because_rota_already_exists(
     rota_name = str(uuid.uuid4())
     expected_db_path = data_home / f"rota__{rota_name}.db"
 
-    rc = main(("init", rota_name))
+    rc = main.main(("init", rota_name))
     assert rc == 0
     assert expected_db_path.exists()
 
-    rc = main(("init", rota_name))
+    rc = main.main(("init", rota_name))
     captured = capsys.readouterr()
     assert rc == 1
     assert expected_db_path.exists()
@@ -97,11 +97,11 @@ def test__init__rota_can_be_created__with_no_members(
     rota_name = str(uuid.uuid4())
     expected_db_path = data_home / f"rota__{rota_name}.db"
 
-    rc = main(("init", rota_name))
+    rc = main.main(("init", rota_name))
     assert rc == 0
     assert expected_db_path.exists()
 
-    rc = main(("show", rota_name))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
     assert captured.out == ""
@@ -112,11 +112,11 @@ def test__init__rota_can_be_created__with_no_members(
     "members_csv, expected_stdout",
     [
         ("", ""),
-        ("foo", "foo: \n"),
-        ("    foo      ", "foo: \n"),
-        ("foo,bar", "bar: \nfoo: \n"),
-        ("    foo ,     bar    ", "bar: \nfoo: \n"),
-        ("Foo Bar,Baz Qux,Ahoy!", "Ahoy!: \nBaz Qux: \nFoo Bar: \n"),
+        ("foo", "foo  \n"),
+        ("    foo      ", "foo  \n"),
+        ("foo,bar", "bar  \nfoo  \n"),
+        ("    foo ,     bar    ", "bar  \nfoo  \n"),
+        ("Foo Bar,Baz Qux,Ahoy!", "Ahoy!    \nBaz Qux  \nFoo Bar  \n"),
     ],
 )
 def test__init__rota_can_be_created__with_members(
@@ -128,11 +128,11 @@ def test__init__rota_can_be_created__with_members(
     rota_name = str(uuid.uuid4())
     expected_db_path = data_home / f"rota__{rota_name}.db"
 
-    rc = main(("init", rota_name, "--members", members_csv))
+    rc = main.main(("init", rota_name, "--members", members_csv))
     assert rc == 0
     assert expected_db_path.exists()
 
-    rc = main(("show", rota_name))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
     assert captured.out == expected_stdout
@@ -142,7 +142,7 @@ def test__init__rota_can_be_created__with_members(
 def test__list__no_rotas_prints_nothing(
     capsys: pytest.CaptureFixture,
 ):
-    rc = main(("list",))
+    rc = main.main(("list",))
     captured = capsys.readouterr()
     assert rc == 0
     assert captured.out == ""
@@ -154,17 +154,17 @@ def test__list__rotas_can_be_listed(
     capsys: pytest.CaptureFixture,
 ):
     for name in ("foo", "bar", "baz"):
-        main(("init", name))
+        main.main(("init", name))
 
-    rc = main(("list",))
+    rc = main.main(("list",))
     captured = capsys.readouterr()
     assert rc == 0
     assert captured.err == ""
     assert captured.out == textwrap.dedent(
         f"""\
-        bar  ({data_home / 'rota__bar.db'})
-        baz  ({data_home / 'rota__baz.db'})
-        foo  ({data_home / 'rota__foo.db'})
+        bar     {main.GREY}{data_home / 'rota__bar.db'}{main.RESET}
+        baz     {main.GREY}{data_home / 'rota__baz.db'}{main.RESET}
+        foo     {main.GREY}{data_home / 'rota__foo.db'}{main.RESET}
         """
     )
 
@@ -175,11 +175,11 @@ def test__delete__rota_can_be_deleted(
     rota_name = str(uuid.uuid4())
     expected_db_path = data_home / f"rota__{rota_name}.db"
 
-    rc = main(("init", rota_name))
+    rc = main.main(("init", rota_name))
     assert rc == 0
     assert expected_db_path.exists()
 
-    rc = main(("delete", rota_name))
+    rc = main.main(("delete", rota_name))
     assert rc == 0
     assert not expected_db_path.exists()
 
@@ -192,7 +192,7 @@ def test__delete__rota_cannot_be_deleted__because_it_does_not_exist(
     expected_db_path = data_home / f"rota__{rota_name}.db"
     assert not expected_db_path.exists()
 
-    rc = main(("delete", rota_name))
+    rc = main.main(("delete", rota_name))
     captured = capsys.readouterr()
     assert not expected_db_path.exists()
     assert rc == 1
@@ -205,27 +205,27 @@ def test__run__rota_can_be_run__with_existing_member(
 ):
     rota_name = str(uuid.uuid4())
 
-    main(("init", rota_name, "--members", "foo,bar"))
-    rc = main(("show", rota_name))
+    main.main(("init", rota_name, "--members", "foo,bar"))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nfoo: \n"
+    assert captured.out == "bar  \nfoo  \n"
     assert captured.err == ""
 
     foo_at = '2020-01-01 10:00:00'
-    main(("run", rota_name, "--member", "foo", "--at", foo_at))
-    rc = main(("show", rota_name))
+    main.main(("run", rota_name, "--member", "foo", "--at", foo_at))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == f"bar: \nfoo: {foo_at}\n"
+    assert captured.out == f"bar  \nfoo  {foo_at}\n"
     assert captured.err == ""
 
     bar_at = '2020-01-01 11:00:00'
-    main(("run", rota_name, "--member", "bar", "--at", bar_at))
-    rc = main(("show", rota_name))
+    main.main(("run", rota_name, "--member", "bar", "--at", bar_at))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == f"foo: {foo_at}\nbar: {bar_at}\n"
+    assert captured.out == f"foo  {foo_at}\nbar  {bar_at}\n"
     assert captured.err == ""
 
 
@@ -234,19 +234,19 @@ def test__run__rota_can_be_run__with_new_member(
 ):
     rota_name = str(uuid.uuid4())
 
-    main(("init", rota_name, "--members", "foo,bar"))
-    rc = main(("show", rota_name))
+    main.main(("init", rota_name, "--members", "foo,bar"))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nfoo: \n"
+    assert captured.out == "bar  \nfoo  \n"
     assert captured.err == ""
 
     at = '2020-01-01 12:00:00'
-    main(("run", rota_name, "--member", "baz", "--at", at))
-    rc = main(("show", rota_name))
+    main.main(("run", rota_name, "--member", "baz", "--at", at))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == f"bar: \nfoo: \nbaz: {at}\n"
+    assert captured.out == f"bar  \nfoo  \nbaz  {at}\n"
     assert captured.err == ""
 
 
@@ -255,21 +255,41 @@ def test__run__rota_can_be_run__and_then_shown(
 ):
     rota_name = str(uuid.uuid4())
 
-    main(("init", rota_name, "--members", "foo,bar"))
-    rc = main(("show", rota_name))
+    main.main(("init", rota_name, "--members", "foo,bar"))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nfoo: \n"
+    assert captured.out == "bar  \nfoo  \n"
     assert captured.err == ""
 
     at = '2020-01-01 12:00:00'
-    rc = main(
+    rc = main.main(
         ("run", rota_name, "--member", "baz", "--at", at, "--show")
     )
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == f"bar: \nfoo: \nbaz: {at}\n"
+    assert captured.out == f"bar  {main.GREY}{main.RESET}\nfoo  {main.GREY}{main.RESET}\nbaz  {main.GREY}{at}{main.RESET}\n"
     assert captured.err == ""
+    assert captured.err == ""
+
+
+def test__run__rota_cannot_be_run__because_there_are_no_members(
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name))
+    rc = main.main(("show", rota_name))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == ""
+    assert captured.err == ""
+
+    rc = main.main(("run", rota_name))
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert captured.out == ""
+    assert captured.err == "error: no members to choose from\n"
 
 
 def test__run__rota_can_be_run__with_interactive_menu(
@@ -279,11 +299,11 @@ def test__run__rota_can_be_run__with_interactive_menu(
 ):
     rota_name = str(uuid.uuid4())
 
-    main(("init", rota_name, "--members", "foo,bar,baz"))
-    rc = main(("show", rota_name))
+    main.main(("init", rota_name, "--members", "foo,bar,baz"))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nbaz: \nfoo: \n"
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
     assert captured.err == ""
 
     monkeypatch.setattr(termios, "tcgetattr", lambda _: [])
@@ -305,13 +325,13 @@ def test__run__rota_can_be_run__with_interactive_menu(
     monkeypatch.setattr(os, "read", mock_read)
     at = '2020-01-01 12:00:00'
 
-    rc = main(("run", rota_name, "--at", at))
+    rc = main.main(("run", rota_name, "--at", at))
     capsys.readouterr()
 
-    main(("show", rota_name))
+    main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nfoo: \nbaz: 2020-01-01 12:00:00\n"
+    assert captured.out == "bar  \nfoo  \nbaz  2020-01-01 12:00:00\n"
     assert captured.err == ""
 
 
@@ -322,11 +342,11 @@ def test__run__rota_can_be_run__and_interactive_menu_cancelled(
 ):
     rota_name = str(uuid.uuid4())
 
-    main(("init", rota_name, "--members", "foo,bar,baz"))
-    rc = main(("show", rota_name))
+    main.main(("init", rota_name, "--members", "foo,bar,baz"))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nbaz: \nfoo: \n"
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
     assert captured.err == ""
 
     monkeypatch.setattr(termios, "tcgetattr", lambda _: [])
@@ -335,13 +355,13 @@ def test__run__rota_can_be_run__and_interactive_menu_cancelled(
     monkeypatch.setattr(sys.stdin, "fileno", lambda: 0)  # noqa
     monkeypatch.setattr(os, "read", lambda *_: B_KEY_ESC)
 
-    rc = main(("run", rota_name))
+    rc = main.main(("run", rota_name))
     capsys.readouterr()
 
-    main(("show", rota_name))
+    main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nbaz: \nfoo: \n"
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
     assert captured.err == ""
 
 
@@ -352,11 +372,11 @@ def test__run__rota_can_be_run__and_sigint_is_handled_gracefully(
 ):
     rota_name = str(uuid.uuid4())
 
-    main(("init", rota_name, "--members", "foo,bar,baz"))
-    rc = main(("show", rota_name))
+    main.main(("init", rota_name, "--members", "foo,bar,baz"))
+    rc = main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nbaz: \nfoo: \n"
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
     assert captured.err == ""
 
     monkeypatch.setattr(termios, "tcgetattr", lambda _: [])
@@ -375,11 +395,11 @@ def test__run__rota_can_be_run__and_sigint_is_handled_gracefully(
     thread.daemon = True
     thread.start()
 
-    rc = main(("run", rota_name))
+    rc = main.main(("run", rota_name))
     capsys.readouterr()
 
-    main(("show", rota_name))
+    main.main(("show", rota_name, "--no-colour"))
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == "bar: \nbaz: \nfoo: \n"
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
     assert captured.err == ""
