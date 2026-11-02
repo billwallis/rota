@@ -290,8 +290,18 @@ def _delete(args: argparse.Namespace) -> int:
 
 def _show(args: argparse.Namespace) -> int:
     rota_ = Rota(name=args.rota_name)
-    for member in get_members(rota_.store):
-        print(member)
+    members = get_members(rota_.store)
+    if not members:
+        return 0
+
+    left_width = max(len(m.member_name) for m in members)
+    for member in members:
+        member_name = f"{member.member_name:<{left_width}}"
+        last_actioned = "" if member.last_actioned is None else str(member.last_actioned)
+        if args.colour:
+            print(f"{member_name}  {colour(last_actioned, GREY)}")
+        else:
+            print(f"{member_name}  {last_actioned}")
 
     return 0
 
@@ -334,6 +344,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser__show = subparsers.add_parser("show")
     parser__show.add_argument("rota_name")
+    parser__show.add_argument(
+        "--colour",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=f"Whether to use colour in display. Defaults to `%(default)s`.",
+    )
 
     parser__run = subparsers.add_parser("run")
     parser__run.add_argument("rota_name")
@@ -343,6 +359,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--at",
         type=lambda at: datetime.datetime.strptime(at, DATETIME_FORMAT),
         default=datetime.datetime.now(),
+    )
+    parser__run.add_argument(
+        "--colour",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=f"Whether to use colour in display. Defaults to `%(default)s`.",
     )
 
     args = parser.parse_args(argv)
