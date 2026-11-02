@@ -270,6 +270,26 @@ def test__run__rota_can_be_run__and_then_shown(
     assert rc == 0
     assert captured.out == f"bar  {main.GREY}{main.RESET}\nfoo  {main.GREY}{main.RESET}\nbaz  {main.GREY}{at}{main.RESET}\n"
     assert captured.err == ""
+    assert captured.err == ""
+
+
+def test__run__rota_cannot_be_run__because_there_are_no_members(
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name))
+    rc = main.main(("show", rota_name))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == ""
+    assert captured.err == ""
+
+    rc = main.main(("run", rota_name))
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert captured.out == ""
+    assert captured.err == "error: no members to choose from\n"
 
 
 def test__run__rota_can_be_run__with_interactive_menu(

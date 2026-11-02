@@ -53,6 +53,10 @@ def get_state_home() -> pathlib.Path:
     return pathlib.Path(_get("XDG_STATE_HOME", HOME / ".local/state")) / "rota"
 
 
+class NoMembersError(Exception):
+    pass
+
+
 class FromTupleable(Protocol):
     @classmethod
     def from_tuple(cls, data: tuple) -> Self: ...
@@ -221,6 +225,9 @@ def run_rota_with_menu(
         rota.menu.MenuOption(value=member.member_name, label=str(member))
         for member in get_members(client)
     ]
+    if not options:
+        raise NoMembersError("error: no members to choose from")
+
     with rota.menu.hide_cursor():
         try:
             member_name = rota.menu.display_menu(options)
@@ -311,7 +318,12 @@ def _run(args: argparse.Namespace) -> int:
     if args.member:
         run_rota_for_member(rota_.store, args.member, args.at)
     else:
-        run_rota_with_menu(rota_.store, args.at)
+        try:
+            run_rota_with_menu(rota_.store, args.at)
+        except NoMembersError:
+            print("error: no members to choose from", file=sys.stderr)
+            return 1
+
     if args.show:
         _show(args)
 
