@@ -145,13 +145,28 @@ class RotaEntry:
 
     @classmethod
     def from_tuple(cls, data: tuple) -> Self:
+        if data[1] is None or data[1] == "":
+            last_actioned = None
+        else:
+            last_actioned = datetime.datetime.strptime(data[1], DATETIME_FORMAT)
+
         return cls(
             member_name=data[0],
-            last_actioned=data[1],
+            last_actioned=last_actioned,
         )
 
-    def __str__(self) -> str:
-        return f"{self.member_name}: {self.last_actioned or ''}"
+
+def format_rota_entry(rota_entry: RotaEntry, max_width: int, use_colour: bool) -> str:
+    member_name = f"{rota_entry.member_name:<{max_width}}"
+    if rota_entry.last_actioned is None:
+        last_actioned = ""
+    else:
+        last_actioned = rota_entry.last_actioned.strftime(DATETIME_FORMAT)
+
+    if use_colour:
+        return f"{member_name}  {colour(last_actioned, GREY)}"
+    else:
+        return f"{member_name}  {last_actioned}"
 
 
 class Rota:
@@ -220,13 +235,24 @@ def run_rota_for_member(
 def run_rota_with_menu(
     client: sqlite3.Connection,
     actioned_at: datetime.datetime,
+    use_colour: bool,
 ) -> None:
-    options = [
-        rota.menu.MenuOption(value=member.member_name, label=str(member))
-        for member in get_members(client)
-    ]
-    if not options:
+    members = get_members(client)
+    if not members:
         raise NoMembersError("error: no members to choose from")
+
+    left_width = max(len(m.member_name) for m in members)
+    options = [
+        rota.menu.MenuOption(
+            value=member.member_name,
+            label=format_rota_entry(
+                rota_entry=member,
+                max_width=left_width,
+                use_colour=use_colour,
+            ),
+        )
+        for member in members
+    ]
 
     with rota.menu.hide_cursor():
         try:
@@ -309,12 +335,13 @@ def _show(args: argparse.Namespace) -> int:
 
     left_width = max(len(m.member_name) for m in members)
     for member in members:
-        member_name = f"{member.member_name:<{left_width}}"
-        last_actioned = "" if member.last_actioned is None else str(member.last_actioned)
-        if args.colour:
-            print(f"{member_name}  {colour(last_actioned, GREY)}")
-        else:
-            print(f"{member_name}  {last_actioned}")
+        print(
+            format_rota_entry(
+                rota_entry=member,
+                max_width=left_width,
+                use_colour=args.colour,
+            )
+        )
 
     return 0
 
@@ -325,7 +352,7 @@ def _run(args: argparse.Namespace) -> int:
         run_rota_for_member(rota_.store, args.member, args.at)
     else:
         try:
-            run_rota_with_menu(rota_.store, args.at)
+            run_rota_with_menu(rota_.store, args.at, args.colour)
         except NoMembersError:
             print(
                 colour("error: no members to choose from", RED),
