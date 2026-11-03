@@ -17,7 +17,7 @@ from collections.abc import Generator
 
 import pytest
 
-from rota import main
+from rota import colours, main
 
 B_KEY_ESC = b"\x1b"
 B_KEY_RETURN = b"\n"
@@ -87,7 +87,7 @@ def test__init__rota_cannot_be_created__because_rota_already_exists(
     assert rc == 1
     assert expected_db_path.exists()
     assert captured.out == ""
-    assert captured.err == f"{main.RED}error: rota '{rota_name}' already exists{main.RESET}\n"
+    assert captured.err == f"{colours.RED}error: rota '{rota_name}' already exists{colours.RESET}\n"
 
 
 def test__init__rota_can_be_created__with_no_members(
@@ -162,9 +162,9 @@ def test__list__rotas_can_be_listed(
     assert captured.err == ""
     assert captured.out == textwrap.dedent(
         f"""\
-        bar     {main.GREY}{data_home / 'rota__bar.db'}{main.RESET}
-        baz     {main.GREY}{data_home / 'rota__baz.db'}{main.RESET}
-        foo     {main.GREY}{data_home / 'rota__foo.db'}{main.RESET}
+        bar     {colours.GREY}{data_home / 'rota__bar.db'}{colours.RESET}
+        baz     {colours.GREY}{data_home / 'rota__baz.db'}{colours.RESET}
+        foo     {colours.GREY}{data_home / 'rota__foo.db'}{colours.RESET}
         """
     )
 
@@ -197,7 +197,7 @@ def test__delete__rota_cannot_be_deleted__because_it_does_not_exist(
     assert not expected_db_path.exists()
     assert rc == 1
     assert captured.out == ""
-    assert captured.err.startswith(f"{main.RED}error: rota not found at ")
+    assert captured.err.startswith(f"{colours.RED}error: rota not found at ")
 
 
 def test__run__rota_can_be_run__with_existing_member(
@@ -268,7 +268,7 @@ def test__run__rota_can_be_run__and_then_shown(
     )
     captured = capsys.readouterr()
     assert rc == 0
-    assert captured.out == f"bar  {main.GREY}{main.RESET}\nfoo  {main.GREY}{main.RESET}\nbaz  {main.GREY}{at}{main.RESET}\n"
+    assert captured.out == f"bar  {colours.GREY}{colours.RESET}\nfoo  {colours.GREY}{colours.RESET}\nbaz  {colours.GREY}{at}{colours.RESET}\n"
     assert captured.err == ""
     assert captured.err == ""
 
@@ -289,7 +289,7 @@ def test__run__rota_cannot_be_run__because_there_are_no_members(
     captured = capsys.readouterr()
     assert rc == 1
     assert captured.out == ""
-    assert captured.err == f"{main.RED}error: no members to choose from{main.RESET}\n"
+    assert captured.err == f"{colours.RED}error: no members to choose from{colours.RESET}\n"
 
 
 def test__run__rota_can_be_run__with_interactive_menu(

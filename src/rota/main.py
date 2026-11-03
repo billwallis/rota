@@ -13,6 +13,7 @@ import tomllib
 from collections.abc import Sequence
 from typing import Protocol, Self, overload
 
+import rota.colours
 import rota.menu
 
 HERE = pathlib.Path(__file__).parent
@@ -22,24 +23,6 @@ _get = os.environ.get
 HOME = pathlib.Path(_get("HOME", _get("USERPROFILE", "."))).resolve()
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-RED = "\033[0;31m"
-GREEN = "\033[0;32m"
-YELLOW = "\033[0;33m"
-BLUE = "\033[0;34m"
-MAGENTA = "\033[0;35m"
-CYAN = "\033[0;36m"
-GREY = "\033[38;5;240m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
-
-
-def colour(text: str, colour_: str) -> str:
-    """
-    Return the text in the given colour.
-    """
-
-    return f"{colour_}{text}{RESET}"
 
 
 def get_data_home() -> pathlib.Path:
@@ -164,7 +147,7 @@ def format_rota_entry(rota_entry: RotaEntry, max_width: int, use_colour: bool) -
         last_actioned = rota_entry.last_actioned.strftime(DATETIME_FORMAT)
 
     if use_colour:
-        return f"{member_name}  {colour(last_actioned, GREY)}"
+        return f"{member_name}  {rota.colours.colour(last_actioned, rota.colours.GREY)}"
     else:
         return f"{member_name}  {last_actioned}"
 
@@ -287,7 +270,7 @@ def _list() -> int:
     left_width = -5 + max(len(p.name) for p in rota_paths)
     for rota_path in rota_paths:
         rota_name = rota_path.name[6:-3]
-        print(f"{rota_name:<{left_width}} {colour(str(rota_path), GREY)}")
+        print(f"{rota_name:<{left_width}} {rota.colours.colour(str(rota_path), rota.colours.GREY)}")
 
     return 0
 
@@ -296,7 +279,7 @@ def _init(args: argparse.Namespace) -> int:
     rota_ = Rota(name=args.rota_name)
     if rota_.store_path.exists():
         print(
-            colour(f"error: rota '{args.rota_name}' already exists", RED),
+            rota.colours.colour(f"error: rota '{args.rota_name}' already exists", rota.colours.RED),
             file=sys.stderr,
         )
         return 1
@@ -321,7 +304,7 @@ def _delete(args: argparse.Namespace) -> int:
         return 0
     else:
         print(
-            colour(f"error: rota not found at '{store_path}'", RED),
+            rota.colours.colour(f"error: rota not found at '{store_path}'", rota.colours.RED),
             file=sys.stderr,
         )
         return 1
@@ -355,7 +338,7 @@ def _run(args: argparse.Namespace) -> int:
             run_rota_with_menu(rota_.store, args.at, args.colour)
         except NoMembersError:
             print(
-                colour("error: no members to choose from", RED),
+                rota.colours.colour("error: no members to choose from", rota.colours.RED),
                 file=sys.stderr,
             )
             return 1
