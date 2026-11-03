@@ -13,6 +13,7 @@ import tomllib
 from collections.abc import Sequence
 from typing import Protocol, Self, overload
 
+import rota.colours
 import rota.menu
 
 HERE = pathlib.Path(__file__).parent
@@ -22,24 +23,6 @@ _get = os.environ.get
 HOME = pathlib.Path(_get("HOME", _get("USERPROFILE", "."))).resolve()
 
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-
-RED = "\033[0;31m"
-GREEN = "\033[0;32m"
-YELLOW = "\033[0;33m"
-BLUE = "\033[0;34m"
-MAGENTA = "\033[0;35m"
-CYAN = "\033[0;36m"
-GREY = "\033[38;5;240m"
-BOLD = "\033[1m"
-RESET = "\033[0m"
-
-
-def colour(text: str, colour_: str) -> str:
-    """
-    Return the text in the given colour.
-    """
-
-    return f"{colour_}{text}{RESET}"
 
 
 def get_data_home() -> pathlib.Path:
@@ -145,13 +128,28 @@ class RotaEntry:
 
     @classmethod
     def from_tuple(cls, data: tuple) -> Self:
+        if data[1] is None or data[1] == "":
+            last_actioned = None
+        else:
+            last_actioned = datetime.datetime.strptime(data[1], DATETIME_FORMAT)
+
         return cls(
             member_name=data[0],
-            last_actioned=data[1],
+            last_actioned=last_actioned,
         )
 
-    def __str__(self) -> str:
-        return f"{self.member_name}: {self.last_actioned or ''}"
+
+def format_rota_entry(rota_entry: RotaEntry, max_width: int, use_colour: bool) -> str:
+    member_name = f"{rota_entry.member_name:<{max_width}}"
+    if rota_entry.last_actioned is None:
+        last_actioned = ""
+    else:
+        last_actioned = rota_entry.last_actioned.strftime(DATETIME_FORMAT)
+
+    if use_colour:
+        return f"{member_name}  {rota.colours.colour(last_actioned, rota.colours.GREY)}"
+    else:
+        return f"{member_name}  {last_actioned}"
 
 
 class Rota:
@@ -220,13 +218,24 @@ def run_rota_for_member(
 def run_rota_with_menu(
     client: sqlite3.Connection,
     actioned_at: datetime.datetime,
+    use_colour: bool,
 ) -> None:
-    options = [
-        rota.menu.MenuOption(value=member.member_name, label=str(member))
-        for member in get_members(client)
-    ]
-    if not options:
+    members = get_members(client)
+    if not members:
         raise NoMembersError("error: no members to choose from")
+
+    left_width = max(len(m.member_name) for m in members)
+    options = [
+        rota.menu.MenuOption(
+            value=member.member_name,
+            label=format_rota_entry(
+                rota_entry=member,
+                max_width=left_width,
+                use_colour=use_colour,
+            ),
+        )
+        for member in members
+    ]
 
     with rota.menu.hide_cursor():
         try:
@@ -261,7 +270,7 @@ def _list() -> int:
     left_width = -5 + max(len(p.name) for p in rota_paths)
     for rota_path in rota_paths:
         rota_name = rota_path.name[6:-3]
-        print(f"{rota_name:<{left_width}} {colour(str(rota_path), GREY)}")
+        print(f"{rota_name:<{left_width}} {rota.colours.colour(str(rota_path), rota.colours.GREY)}")
 
     return 0
 
@@ -269,7 +278,10 @@ def _list() -> int:
 def _init(args: argparse.Namespace) -> int:
     rota_ = Rota(name=args.rota_name)
     if rota_.store_path.exists():
-        print(f"error: rota '{args.rota_name}' already exists", file=sys.stderr)
+        print(
+            rota.colours.colour(f"error: rota '{args.rota_name}' already exists", rota.colours.RED),
+            file=sys.stderr,
+        )
         return 1
 
     members = [
@@ -291,7 +303,10 @@ def _delete(args: argparse.Namespace) -> int:
         store_path.unlink()
         return 0
     else:
-        print(f"error: rota not found at '{store_path}'", file=sys.stderr)
+        print(
+            rota.colours.colour(f"error: rota not found at '{store_path}'", rota.colours.RED),
+            file=sys.stderr,
+        )
         return 1
 
 
@@ -303,12 +318,13 @@ def _show(args: argparse.Namespace) -> int:
 
     left_width = max(len(m.member_name) for m in members)
     for member in members:
-        member_name = f"{member.member_name:<{left_width}}"
-        last_actioned = "" if member.last_actioned is None else str(member.last_actioned)
-        if args.colour:
-            print(f"{member_name}  {colour(last_actioned, GREY)}")
-        else:
-            print(f"{member_name}  {last_actioned}")
+        print(
+            format_rota_entry(
+                rota_entry=member,
+                max_width=left_width,
+                use_colour=args.colour,
+            )
+        )
 
     return 0
 
@@ -319,9 +335,12 @@ def _run(args: argparse.Namespace) -> int:
         run_rota_for_member(rota_.store, args.member, args.at)
     else:
         try:
-            run_rota_with_menu(rota_.store, args.at)
+            run_rota_with_menu(rota_.store, args.at, args.colour)
         except NoMembersError:
-            print("error: no members to choose from", file=sys.stderr)
+            print(
+                rota.colours.colour("error: no members to choose from", rota.colours.RED),
+                file=sys.stderr,
+            )
             return 1
 
     if args.show:
