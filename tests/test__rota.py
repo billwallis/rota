@@ -87,7 +87,7 @@ def test__init__rota_cannot_be_created__because_rota_already_exists(
     assert rc == 1
     assert expected_db_path.exists()
     assert captured.out == ""
-    assert captured.err == f"error: rota '{rota_name}' already exists\n"
+    assert captured.err == f"{main.RED}error: rota '{rota_name}' already exists{main.RESET}\n"
 
 
 def test__init__rota_can_be_created__with_no_members(
@@ -197,7 +197,7 @@ def test__delete__rota_cannot_be_deleted__because_it_does_not_exist(
     assert not expected_db_path.exists()
     assert rc == 1
     assert captured.out == ""
-    assert captured.err.startswith("error: rota not found at ")
+    assert captured.err.startswith(f"{main.RED}error: rota not found at ")
 
 
 def test__run__rota_can_be_run__with_existing_member(
@@ -289,7 +289,7 @@ def test__run__rota_cannot_be_run__because_there_are_no_members(
     captured = capsys.readouterr()
     assert rc == 1
     assert captured.out == ""
-    assert captured.err == "error: no members to choose from\n"
+    assert captured.err == f"{main.RED}error: no members to choose from{main.RESET}\n"
 
 
 def test__run__rota_can_be_run__with_interactive_menu(

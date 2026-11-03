@@ -269,7 +269,10 @@ def _list() -> int:
 def _init(args: argparse.Namespace) -> int:
     rota_ = Rota(name=args.rota_name)
     if rota_.store_path.exists():
-        print(f"error: rota '{args.rota_name}' already exists", file=sys.stderr)
+        print(
+            colour(f"error: rota '{args.rota_name}' already exists", RED),
+            file=sys.stderr,
+        )
         return 1
 
     members = [
@@ -291,7 +294,10 @@ def _delete(args: argparse.Namespace) -> int:
         store_path.unlink()
         return 0
     else:
-        print(f"error: rota not found at '{store_path}'", file=sys.stderr)
+        print(
+            colour(f"error: rota not found at '{store_path}'", RED),
+            file=sys.stderr,
+        )
         return 1
 
 
@@ -321,7 +327,10 @@ def _run(args: argparse.Namespace) -> int:
         try:
             run_rota_with_menu(rota_.store, args.at)
         except NoMembersError:
-            print("error: no members to choose from", file=sys.stderr)
+            print(
+                colour("error: no members to choose from", RED),
+                file=sys.stderr,
+            )
             return 1
 
     if args.show:
