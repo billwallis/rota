@@ -7,6 +7,9 @@ from collections import namedtuple
 from collections.abc import Generator, Sequence
 from typing import TextIO
 
+import rota.colours
+from rota import colours
+
 ASCII_CURSOR_UP = "\x1b[1F"
 ASCII_CLEAR_LINE = "\x1b[2K"
 ASCII_HIDE_CURSOR = "\x1b[?25l"
@@ -94,8 +97,11 @@ def display_menu(options: Sequence[MenuOption]) -> str | None:
         increment = {KEY_UP: -1, KEY_DOWN: 1}.get(key, 0)
         row = (row + increment) % l
 
-        output = [
-            f"{'*' if n == row else ' '} {label}\n"
-            for n, (_, label) in enumerate(options)
-        ]
-        _write(sys.stdout, "".join(output))
+        output = ""
+        for n, (_, label) in enumerate(options):
+            if n == row:
+                output += f"* {colours.colour(label, colours.BLUE + colours.BOLD)}\n"
+            else:
+                output += f"  {label}\n"
+
+        _write(sys.stdout, output)
