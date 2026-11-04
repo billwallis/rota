@@ -8,7 +8,6 @@ from collections.abc import Generator, Sequence
 from typing import TextIO
 
 import rota.colours
-from rota import colours
 
 ASCII_CURSOR_UP = "\x1b[1F"
 ASCII_CLEAR_LINE = "\x1b[2K"
@@ -100,7 +99,7 @@ def display_menu(options: Sequence[MenuOption]) -> str | None:
         output = ""
         for n, (_, label) in enumerate(options):
             if n == row:
-                output += f"* {colours.colour(label, colours.BLUE + colours.BOLD)}\n"
+                output += f"* {rota.colours.colour(label, rota.colours.BLUE + rota.colours.BOLD)}\n"
             else:
                 output += f"  {label}\n"
 
