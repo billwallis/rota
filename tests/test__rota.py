@@ -6,23 +6,22 @@ import os
 import pathlib
 import signal
 import sys
-import termios
 import textwrap
 import threading
 import time
-import tty
 import unittest.mock
 import uuid
 from collections.abc import Generator
 
 import pytest
 
-from rota import colours, main
+from rota import colours, main, menu
 
-B_KEY_ESC = b"\x1b"
-B_KEY_RETURN = b"\n"
-B_KEY_UP = b"\x1b[A"
-B_KEY_DOWN = b"\x1b[B"
+if sys.platform == "win32":  # pragma: win32 cover
+    import msvcrt
+else:  # pragma: win32 no cover
+    import termios
+    import tty
 
 
 @pytest.fixture(autouse=True)
@@ -292,7 +291,47 @@ def test__run__rota_cannot_be_run__because_there_are_no_members(
     assert captured.err == f"{colours.RED}error: no members to choose from{colours.RESET}\n"
 
 
-def test__run__rota_can_be_run__with_interactive_menu(
+@pytest.mark.skipif(sys.platform != "win32", reason="only runs on windows")
+def test__run__rota_can_be_run__with_interactive_menu__windows(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name, "--members", "foo,bar,baz"))
+    rc = main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
+    assert captured.err == ""
+
+    mock_read = unittest.mock.Mock()
+    # Test that the cursor can move *and* cycle
+    mock_read.side_effect = [
+        *(b"\xe0", b"P"),  # Down
+        *(b"\xe0", b"P"),  # Down
+        *(b"\xe0", b"P"),  # Down
+        *(b"\xe0", b"P"),  # Down
+        *(b"\xe0", b"H"),  # Up
+        *(b"\xe0", b"P"),  # Down
+        menu.B_KEY_RETURN,
+    ]
+    monkeypatch.setattr(msvcrt, "getch", mock_read)
+    at = '2020-01-01 12:00:00'
+
+    rc = main.main(("run", rota_name, "--at", at))
+    capsys.readouterr()
+
+    main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nfoo  \nbaz  2020-01-01 12:00:00\n"
+    assert captured.err == ""
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+def test__run__rota_can_be_run__with_interactive_menu__posix(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture,
@@ -314,13 +353,13 @@ def test__run__rota_can_be_run__with_interactive_menu(
     mock_read = unittest.mock.Mock()
     # Test that the cursor can move *and* cycle
     mock_read.side_effect = [
-        B_KEY_DOWN,
-        B_KEY_DOWN,
-        B_KEY_DOWN,
-        B_KEY_DOWN,
-        B_KEY_UP,
-        B_KEY_DOWN,
-        B_KEY_RETURN,
+        menu.B_KEY_DOWN,
+        menu.B_KEY_DOWN,
+        menu.B_KEY_DOWN,
+        menu.B_KEY_DOWN,
+        menu.B_KEY_UP,
+        menu.B_KEY_DOWN,
+        menu.B_KEY_RETURN,
     ]
     monkeypatch.setattr(os, "read", mock_read)
     at = '2020-01-01 12:00:00'
@@ -335,7 +374,35 @@ def test__run__rota_can_be_run__with_interactive_menu(
     assert captured.err == ""
 
 
-def test__run__rota_can_be_run__and_interactive_menu_cancelled(
+@pytest.mark.skipif(sys.platform != "win32", reason="only run on windows")
+def test__run__rota_can_be_run__and_interactive_menu_cancelled__windows(
+    tmp_path: pathlib.Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name, "--members", "foo,bar,baz"))
+    rc = main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
+    assert captured.err == ""
+
+    monkeypatch.setattr(msvcrt, "getch", lambda *_: menu.B_KEY_ESC)
+
+    rc = main.main(("run", rota_name))
+    capsys.readouterr()
+
+    main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nbaz  \nfoo  \n"
+    assert captured.err == ""
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
+def test__run__rota_can_be_run__and_interactive_menu_cancelled__posix(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture,
@@ -353,7 +420,7 @@ def test__run__rota_can_be_run__and_interactive_menu_cancelled(
     monkeypatch.setattr(termios, "tcsetattr", lambda *_: None)
     monkeypatch.setattr(tty, "setcbreak", lambda _: None)
     monkeypatch.setattr(sys.stdin, "fileno", lambda: 0)  # noqa
-    monkeypatch.setattr(os, "read", lambda *_: B_KEY_ESC)
+    monkeypatch.setattr(os, "read", lambda *_: menu.B_KEY_ESC)
 
     rc = main.main(("run", rota_name))
     capsys.readouterr()
@@ -365,6 +432,7 @@ def test__run__rota_can_be_run__and_interactive_menu_cancelled(
     assert captured.err == ""
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
 def test__run__rota_can_be_run__and_sigint_is_handled_gracefully(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
