@@ -240,8 +240,9 @@ def run_rota_with_menu(
     with rota.menu.hide_cursor():
         try:
             member_name = rota.menu.display_menu(options)
-        except BaseException as err:  # noqa
+        except BaseException as err:  # pragma: win32 no cover
             # Even if we CTRL+C, we still want to put the cursor back!
+            # Note: CTRL+C only throws an exception on POSIX platforms
             print(err)
             member_name = None
 
