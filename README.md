@@ -27,20 +27,28 @@ Heard this before? Yeah, me too 😋
 # create a "test" rota with members "foo", "bar", and "baz"
 rota init 'test' --members 'foo,bar,baz'
 
+# list the available rotas
+rota list
+
 # show the current state of the "test" rota
 rota show 'test'
+
+# run the "test" rota interactively (select from a navigable menu)
+rota run 'test'
 
 # run the "test" rota for a given member
 rota run 'test' --member 'foo'
 
-# run the "test" rota for a new member
-rota run 'test' --member 'someone new'
+# run the "test" rota for a new member, then show the updated rota
+rota run 'test' --member 'someone new' --show
 
 # delete the "test" rota
 rota delete 'test'
 ```
 
 Rota data is stored in `$XDG_DATA_HOME/rota`, where `XDG_DATA_HOME` defaults to `~/.local/share`.
+
+Rota logs are stored in `$XDG_STATE_HOME/rota`, where `XDG_STATE_HOME` defaults to `~/.local/state`.
 
 ## Contributing
 

@@ -291,7 +291,7 @@ def test__run__rota_cannot_be_run__because_there_are_no_members(
     assert captured.err == f"{colours.RED}error: no members to choose from{colours.RESET}\n"
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="only runs on windows")
+@pytest.mark.skipif(sys.platform != "win32", reason="only run on windows")
 def test__run__rota_can_be_run__with_interactive_menu__windows(
     tmp_path: pathlib.Path,
     monkeypatch: pytest.MonkeyPatch,
