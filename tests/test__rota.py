@@ -199,6 +199,85 @@ def test__delete__rota_cannot_be_deleted__because_it_does_not_exist(
     assert captured.err.startswith(f"{colours.RED}error: rota not found at ")
 
 
+def test__edit__rota_can_be_edited__by_adding_a_member(
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name, "--members", "foo,bar"))
+    rc = main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nfoo  \n"
+    assert captured.err == ""
+
+    rc = main.main(("edit", rota_name, "--add", "baz"))
+    main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == f"bar  \nbaz  \nfoo  \n"
+    assert captured.err == ""
+
+
+def test__edit__rota_can_be_edited__by_removing_a_member(
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name, "--members", "foo,bar"))
+    rc = main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nfoo  \n"
+    assert captured.err == ""
+
+    rc = main.main(("edit", rota_name, "--remove", "bar"))
+    main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == f"foo  \n"
+    assert captured.err == ""
+
+
+def test__edit__rota_can_be_edited__by_adding_and_removing_members(
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name, "--members", "foo,bar"))
+    rc = main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nfoo  \n"
+    assert captured.err == ""
+
+    rc = main.main(("edit", rota_name, "--add", "baz", "--remove", "bar"))
+    main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == f"baz  \nfoo  \n"
+    assert captured.err == ""
+
+
+def test__edit__rota_cannot_be_edited__because_member_already_exists(
+    capsys: pytest.CaptureFixture,
+):
+    rota_name = str(uuid.uuid4())
+
+    main.main(("init", rota_name, "--members", "foo,bar"))
+    rc = main.main(("show", rota_name, "--no-colour"))
+    captured = capsys.readouterr()
+    assert rc == 0
+    assert captured.out == "bar  \nfoo  \n"
+    assert captured.err == ""
+
+    rc = main.main(("edit", rota_name, "--add", "bar"))
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert captured.out == ""
+    assert f"error adding member 'bar'" in captured.err
+
+
 def test__run__rota_can_be_run__with_existing_member(
     capsys: pytest.CaptureFixture,
 ):

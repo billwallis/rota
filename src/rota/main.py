@@ -215,6 +215,28 @@ def run_rota_for_member(
     )
 
 
+def add_member_to_rota(
+    client: sqlite3.Connection,
+    member_name: str,
+) -> None:
+    run_script(
+        client,
+        "add-rota-member.sql",
+        parameters={"member_name": member_name},
+    )
+
+
+def remove_member_from_rota(
+    client: sqlite3.Connection,
+    member_name: str,
+) -> None:
+    run_script(
+        client,
+        "delete-rota-member.sql",
+        parameters={"member_name": member_name},
+    )
+
+
 def run_rota_with_menu(
     client: sqlite3.Connection,
     actioned_at: datetime.datetime,
@@ -330,6 +352,23 @@ def _show(args: argparse.Namespace) -> int:
     return 0
 
 
+def _edit(args: argparse.Namespace) -> int:
+    rota_ = Rota(name=args.rota_name)
+    if args.add:
+        try:
+            add_member_to_rota(rota_.store, args.add)
+        except sqlite3.IntegrityError as err:
+            print(
+                rota.colours.colour(f"error adding member {args.add!r}: {err}", rota.colours.RED),
+                file=sys.stderr,
+            )
+            return 1
+    if args.remove:
+        remove_member_from_rota(rota_.store, args.remove)
+
+    return 0
+
+
 def _run(args: argparse.Namespace) -> int:
     rota_ = Rota(name=args.rota_name)
     if args.member:
@@ -365,6 +404,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser__init = subparsers.add_parser("init")
     parser__init.add_argument("rota_name")
+    # TODO: Use multi-valued arg, not a single arg
     parser__init.add_argument(
         "--members",
         default="",
@@ -382,6 +422,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=True,
         help=f"Whether to use colour in display. Defaults to `%(default)s`.",
     )
+
+    parser__edit = subparsers.add_parser("edit")
+    parser__edit.add_argument("rota_name")
+    parser__edit.add_argument("--add", required=False)
+    parser__edit.add_argument("--remove", required=False)
 
     parser__run = subparsers.add_parser("run")
     parser__run.add_argument("rota_name")
@@ -408,6 +453,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _delete(args)
     if args.command == "show":
         return _show(args)
+    if args.command == "edit":
+        return _edit(args)
     if args.command == "run":
         return _run(args)
 

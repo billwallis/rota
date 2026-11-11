@@ -42,6 +42,12 @@ rota run 'test' --member 'foo'
 # run the "test" rota for a new member, then show the updated rota
 rota run 'test' --member 'someone new' --show
 
+# add a new member to the rota
+rota edit 'test' --add 'new member'
+
+# remove an existing member from the rota
+rota edit 'test' --remove 'old member'
+
 # delete the "test" rota
 rota delete 'test'
 ```
