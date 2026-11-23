@@ -40,6 +40,10 @@ class NoMembersError(Exception):
     pass
 
 
+class RunCancelled(Exception):
+    pass
+
+
 class FromTupleable(Protocol):
     @classmethod
     def from_tuple(cls, data: tuple) -> Self: ...
@@ -269,8 +273,7 @@ def run_rota_with_menu(
             member_name = None
 
     if member_name is None:
-        print("Cancelling...")
-        return
+        raise RunCancelled()
 
     run_script(
         client,
@@ -382,6 +385,9 @@ def _run(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             return 1
+        except RunCancelled:
+            print("Cancelling...")
+            return 0
 
     if args.show:
         _show(args)
